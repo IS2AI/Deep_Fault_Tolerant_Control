@@ -1,0 +1,45 @@
+#Dataset generation
+window_len : 10
+stride_len : 1
+
+n_times : 2
+n_times_orig : 0
+
+# ratio
+state_len : 400
+train_set_ratio : 0.95
+dev_set_ratio : 0.01
+test_set_ratio : 0.01
+
+# Training
+num_epochs : 310
+batchSize : 1024
+learning_rate : 0.0005
+
+valid_period : 50
+valid_size: 100
+
+# SAVE TRAINED MODEL
+model_name : 'del'
+
+
+
+#############s######
+# SIMULATION MODEL
+###################
+sim_num : 500    # number of traj
+sim_len : 399
+
+sim_model_name : 'Net_GG1_ep200' # 'Net_GG1_ep200' 'Model_WW4XX_test2_ep100' #'Model_WW4_test_ep200' #'Model_WW4_ep200' # Model_WW4_ep200 # Net_GG1_ep200
+sim_normalize: False
+sim_window_len : 1
+
+sim_fault: True
+is_plot : True
+# 0 - position
+# 2 - velocity
+# 4 - wheel
+
+# 8 - all together
+sim_manual_fault_type : 0
+sim_save_result : True
