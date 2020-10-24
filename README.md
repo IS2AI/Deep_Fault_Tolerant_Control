@@ -20,8 +20,7 @@ Implementation of deep fault tolerant control for inverted pendulum with reactio
 
 
 # How to run
-1. Install packages above
-2. Go to directory src/
-3. Set hyperparameters in main.py
-4. Run python main.py 0 - for training
-5. Run python main.py 1 - for testing
+
+2. Open the the directory **src/**
+3. Set model hyperparameters in **config.yml**
+4. Run script for training:  **python main.py 0**
