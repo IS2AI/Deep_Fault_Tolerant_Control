@@ -21,8 +21,9 @@ import yaml
 import copy
 
 def train_model(model, device, data_train, x_dev, y_dev, optimizer, criterion, num_epochs, model_save_path,  window_len, stride_len, valid_period):
-    print('train the model')
+    print('Start training the model')
 
+    # weight decay
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size= 100, gamma= 0.5)
 
     for epoch in range(num_epochs):
@@ -48,9 +49,9 @@ def train_model(model, device, data_train, x_dev, y_dev, optimizer, criterion, n
             output = model(inputs)
 
             loss = criterion(output, labels)
-            
+
             add_L2 = False
-            
+
             if add_L2 == True:
                 #print('L2 added')
                 l2_reg = 0.0
@@ -60,7 +61,7 @@ def train_model(model, device, data_train, x_dev, y_dev, optimizer, criterion, n
                 loss = loss + 1.0/(2*output.size(0))*l2_reg * 0.001
 
             loss.backward()
-            
+
 	    # weight clipping
             #torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
 
@@ -84,7 +85,7 @@ def train_model(model, device, data_train, x_dev, y_dev, optimizer, criterion, n
 
             # save the model
             torch.save(model.state_dict(), model_save_path + '_ep'+ str(epoch+1) + '.pth')
-            
+
             model.eval()
             sample_input = torch.from_numpy(np.ones((1,window_len,6))).float().to(device)
             traced_script_module = torch.jit.trace(model, sample_input)
@@ -215,15 +216,15 @@ def read_data(window_len, stride_len, n_times):
     control=np.concatenate((a['controls'],b['controls'],c['controls'],d['controls'], e['controls'],f['controls'],g['controls'],h['controls']))
     state=np.concatenate((a['states'],b['states'],c['states'],d['states'],e['states'], f['states'],g['states'],h['states']))
 
-    
+
     state = state[:,0:state_len,:]
     control = control[:,0:state_len,:]
-    
+
     print('>> Before fault:', state.shape  )
 
-    
+
     # ADD FAULT
-    state, control = add_noise(state,control, n_times, n_times_orig) 
+    state, control = add_noise(state,control, n_times, n_times_orig)
 
     # normalize inputs
     #max_state_values = [3.14, 3.14, 10, 10, 350, 350,5,5]
@@ -232,7 +233,7 @@ def read_data(window_len, stride_len, n_times):
         # normalize by the POSSIBLE min and max values
 
         #state[:, :, ind] = np.clip(state[:, :, ind], -max_state_values[ind], max_state_values[ind])/max_state_values[ind]
-        
+
         #pass
         #option 2
         # normalize by the min and max values of the given dataset
@@ -241,16 +242,16 @@ def read_data(window_len, stride_len, n_times):
         # print(np.amax(state[:, :, ind]))
 
         #option 3 - Z Scorie
-        # normalize 
-        
+        # normalize
+
         # print(np.std(state[:, :, ind]))
         #std_temp = np.std(state[:, :, ind])
         #state[:, :, ind] = state[:, :, ind]/std_temp # mean is zero
-        
+
         #state[:, :, ind] = (state[:, :, ind] - np.amin(state[:, :, ind])) /(-np.amin(state[:, :, ind]) + np.amax(state[:, :, ind]))
         # print(np.amin(state[:, :, ind]))
         # print(np.amax(state[:, :, ind]))
-    
+
 
 
     # add gaussian noise
@@ -281,8 +282,6 @@ def read_data(window_len, stride_len, n_times):
     x_train_sliced = extract_slices(x_train, window_len, stride_len)
     y_train_sliced = extract_slices(y_train, window_len, stride_len)
 
-    #print('-*-- ', x_train_sliced.shape)
-
     return x_train_sliced, y_train_sliced[:,-1,:], x_dev, y_dev, x_test, y_test
 
 
@@ -303,9 +302,9 @@ def extract_slices(x, window_len, stride_len):
         index_end = count*stride_len + window_len
 
         x_temp = x[:, index_start:index_end, :]
-            
+
         x_sliced = np.vstack((x_sliced, x_temp))
-    
+
         count += 1
 
     print('>> stride count: ', count)
@@ -313,6 +312,6 @@ def extract_slices(x, window_len, stride_len):
 
 
 if __name__ == '__main__':
-    
+
     # test the
     read_data(50, 10, 0.5)

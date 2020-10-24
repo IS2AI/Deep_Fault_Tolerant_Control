@@ -10,15 +10,15 @@ n_times : 2        # faulty dataset size
 n_times_orig : 0   # additional clean data
 
 # Ddataset ratio
-state_len : 400
+state_len : 400           # length of trajectory
 train_set_ratio : 0.90
 dev_set_ratio : 0.05
 test_set_ratio : 0.05
 
 # Training
-num_epochs : 300
-batchSize : 1024
-learning_rate : 0.001
+num_epochs : 300        # number of epochs
+batchSize : 1024        # batch size
+learning_rate : 0.001   # optimizer learning_rate
 
 valid_period : 100   # validation period
 valid_size: 100
