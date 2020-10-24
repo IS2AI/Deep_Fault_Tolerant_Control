@@ -22,6 +22,6 @@ Implementation of deep fault tolerant control for inverted pendulum with reactio
 
 ## Model Training
 
-2. Open the the directory **src/**
-3. Set model hyperparameters in **src/config.yml**
-4. Run the script for training:  **python main.py 0**
+1. Open the the directory **src/**
+2. Set model hyperparameters in **src/config.yml**
+3. Run the script for training:  **python main.py 0**
