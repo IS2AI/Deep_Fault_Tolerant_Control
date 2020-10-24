@@ -4,7 +4,7 @@
 
 #Dataset generation
 window_len : 10     # length of input sequence
-stride_len : 5      # stride length
+stride_len : 1      # stride length
 
 n_times : 2        # faulty dataset size
 n_times_orig : 0   # additional clean data
