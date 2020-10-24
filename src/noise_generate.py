@@ -32,7 +32,7 @@ def fail_traj_upd(state,ind):
     #    fault_states = [randint(0,5)]
     #else:
     #    fault_states = [randint(0,1)]
-
+    
     new_traj = copy.copy(state[ind,:,:])
 
     for f_st in fault_states:
@@ -144,10 +144,6 @@ if __name__ == '__main__':
 
     state = state[:,0:250,:]
     control = control[:,0:250,:]
-
-    #for ind  in range(6):
-    #    std_temp = np.std(state[:, :, ind])
-    #    state[:, :, ind] = state[:, :, ind]/std_temp # mean is zero
 
     for ind in range(10):
         #generate dataset

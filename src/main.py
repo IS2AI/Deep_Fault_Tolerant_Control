@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 from utils import read_data
 from dataset import ControlDataset, ToTensor
-from models import RNN, FNN, SeRNN, DeRNN, ReRNN, LeRNN, MSeRNN, SFeRNN, CNN
+from models import CNN, RNN, FNN, SeRNN, SeRNN_FWXX, DeRNN, ReRNN, LeRNN, FcRNN
 from utils import train_model, test_model
 
 import yaml
@@ -36,7 +36,7 @@ def main():
     n_times = config['n_times']
 
     x_train, y_train, x_dev, y_dev, x_test, y_test = read_data(window_len, stride_len, n_times)
-    print('1 : Dataset:', x_train.shape, y_train.shape, x_dev.shape, y_dev.shape, x_test.shape, y_test.shape)
+    print('Dataset:', x_train.shape, y_train.shape, x_dev.shape, y_dev.shape, x_test.shape, y_test.shape)
 
     # create dataset
     transformed_control_dataset_train = ControlDataset(x_train, y_train, transform=transforms.Compose([ToTensor()]))
@@ -46,16 +46,17 @@ def main():
 
     # create batch
     data_train = DataLoader(transformed_control_dataset_train, batch_size = batchSize, shuffle=True, num_workers=1, drop_last=True)
+
     #data_dev = DataLoader(transformed_control_dataset_dev, batch_size= 1,shuffle=False, num_workers= 1,drop_last= True)
     #data_test = DataLoader(transformed_control_dataset_test, batch_size= 1,shuffle=False, num_workers= 1,drop_last= True)
 
     # Device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print('3: Device:', device)
+    print('Device:', device)
 
     # save model
     save_model_name = config['model_name']
-    print('4: Save Model name: ', save_model_name)
+    print('Save Model name: ', save_model_name)
     model_save_path = '../checkpoints/' + save_model_name #+ '.pt' ## not pth
 
     # test/ train
@@ -65,22 +66,26 @@ def main():
     if mode == 0: # train mode
 
         # Model preparation
-        model = FNN(batchSize, device)
+        model = SeRNN_FWXX(batchSize, device)
+
         #model = torch.jit.load(model_save_path)
         #model.load_state_dict(torch.load('../checkpoints/' + 'RNN_NF_light1_ep200' + '.pt'))
 
+        print('Model: ', model)
         model.to(device)
+        pytorch_total_params = sum(p.numel() for p in model.parameters())
+        print('# of params: ', pytorch_total_params)
 
         # multiple GPUs
         if torch.cuda.device_count() > 1:
-            print("5: Model uploaded. Number of GPUs: ", torch.cuda.device_count())
-            print("model:", model)
+            print("Model uploaded. Number of GPUs: ", torch.cuda.device_count())
+            #print("Model :", model)
             #model = nn.DataParallel(model)
 
-        # loss and optimizer
+        # set the training loss and optimizer
         criterion = nn.MSELoss()
-        #optimizer = optim.RMSprop(model.parameters(), lr=learning_rate)
-        optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum = 0.9)
+        optimizer = optim.RMSprop(model.parameters(), lr=learning_rate)
+        #optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum = 0.9)
         #optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
         train_model(model, device, data_train, x_dev, y_dev, optimizer, criterion, num_epochs, model_save_path,  window_len, stride_len, valid_period)

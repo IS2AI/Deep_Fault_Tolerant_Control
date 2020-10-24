@@ -30,9 +30,6 @@ class ControlDataset(Dataset):
         labels = np.array([labels])
         labels = labels.astype('float').reshape(-1, 2)
 
-        #print(labels.dtype)
-        #print('given labels::', labels)
-
         sample = {'features':features, 'labels':labels}
 
         if self.transform:
