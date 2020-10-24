@@ -4,7 +4,7 @@ Implementation of deep fault tolerant control for inverted pendulum with reactio
 
 
 ## Requirements
-1. Python 3.7
+1. Python 3.8
 2. Pytorch 1.5
 3. CUDA 10.1
 
