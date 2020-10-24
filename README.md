@@ -1,13 +1,13 @@
-# Deep_Fault_Tolerant_Control
+## Deep_Fault_Tolerant_Control
 
 Implementation of deep fault tolerant control for inverted pendulum with reaction wheels. 
 
 
-# Requirements
+## Requirements
 1. Pytorch 1.5
 2. CUDA 10.1
 
-# Creation of conda environment and installation of packages
+## Creation of conda environment and installation of packages
 
 1. conda create -n pytorch_env python=3.8
 2. conda install pytorch torchvision cudatoolkit=10.1 -c pytorch
@@ -19,7 +19,7 @@ Implementation of deep fault tolerant control for inverted pendulum with reactio
 8. conda install pyyaml
 
 
-# How to run
+## Model Training
 
 2. Open the the directory **src/**
 3. Set model hyperparameters in **src/config.yml**
