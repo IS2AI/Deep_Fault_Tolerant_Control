@@ -15,8 +15,7 @@ Implementation of deep fault tolerant control for inverted pendulum with reactio
 5. conda install -c conda-forge matplotlib
 6. conda install -c anaconda scipy
 7. conda install -c anaconda scikit-learn
-
-conda install pyyaml
+8. conda install pyyaml
 
 
 # How to run
