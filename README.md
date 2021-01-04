@@ -1,6 +1,6 @@
 ## Deep_Fault_Tolerant_Control
 
-Implementation of deep fault tolerant control for inverted pendulum with dual-axis reaction wheels. 
+Implementation of a deep fault tolerant control for the inverted pendulum with dual-axis reaction wheels. 
 
 
 ## Requirements
@@ -23,5 +23,5 @@ Implementation of deep fault tolerant control for inverted pendulum with dual-ax
 ## Model Training
 
 1. Open the the directory **src/**
-2. Set model hyperparameters in **src/config.yml**
+2. Set the model hyperparameters in **src/config.yml**
 3. Run the script for training:  **python main.py 0**
