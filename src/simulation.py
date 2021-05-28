@@ -89,17 +89,18 @@ def acting_forces(I11_1,I11_2,I11_3,I12_1,I12_3,I13_1,I13_2,I13_3,
         Iwm1*t3*t6*t12*t13*(1.0/2.0)+Iwm3*t3*t6*t12*t13*(1.0/2.0)-
         Iwp1*t5*t6*t12*t13*(1.0/2.0)+Iwp3*t5*t6*t12*t13*(1.0/2.0)-g*lc12*m1*t4*t12-
         g*lc13*m1*t11*t12],[-b2*dth2+dth1*(I11_1*dth2*t9*2.0+
-            I11_2*dth1*t12+I11_3*dth2*t14*2.0+I12_3*dth1*t6+I12_1*dth1*t12+
-            I13_2*dth1*t6-I13_3*dth2*t9*2.0+I13_1*dth2*t14*2.0)*(1.0/2.0)-k2*theta2-
-            t10*(t19-bwm*dth4)*(1.0/2.0)-t10*(t18-bwp*dth3)*(1.0/2.0)-g*m1*(lc13*t4*t6-lc12*t6*t11)-
-            Iwm2*t3*t4*t11*(1.0/2.0)-Iwp2*t4*t5*t11*(1.0/2.0)-
-            Iwm1*t3*t10*t11*t12*(t17-t4*t10*t12*(1.0/2.0))*(1.0/2.0)+
-            Iwp1*t5*t10*t11*t12*(t17+t4*t10*t12*(1.0/2.0))*(1.0/2.0)-
-            Iwp3*t5*t6*t10*t11*(t15-t16)*(1.0/2.0)+Iwm3*t3*t6*t10*t11*(t15+t16)*(1.0/2.0)],
-            [t18-bwp*dth3-dth3*(dth2*t11*(-Iwp2*t4+Iwp1*t9*(1.0/2.0)-
-                Iwp3*t9*(1.0/2.0)+Iwp3*t4*t7+Iwp1*t4*t20)-dth1*(Iwp1-Iwp3)*(t4+t21-t4*t7*2.0))],
-            [t19-bwm*dth4+dth4*(dth1*(Iwm1-Iwm3)*(-t4+t21+t4*t7*2.0)-
-                dth2*t11*(-Iwm2*t4-Iwm1*t9*(1.0/2.0)+Iwm3*t9*(1.0/2.0)+Iwm3*t4*t7+Iwm1*t4*t20))]],dtype='float').reshape(4,1)
+        I11_2*dth1*t12+I11_3*dth2*t14*2.0+I12_3*dth1*t6+I12_1*dth1*t12+
+        I13_2*dth1*t6-I13_3*dth2*t9*2.0+I13_1*dth2*t14*2.0)*(1.0/2.0)-k2*theta2-
+        t10*(t19-bwm*dth4)*(1.0/2.0)-t10*(t18-bwp*dth3)*(1.0/2.0)-g*m1*(lc13*t4*t6-lc12*t6*t11)-
+        Iwm2*t3*t4*t11*(1.0/2.0)-Iwp2*t4*t5*t11*(1.0/2.0)-
+        Iwm1*t3*t10*t11*t12*(t17-t4*t10*t12*(1.0/2.0))*(1.0/2.0)+
+        Iwp1*t5*t10*t11*t12*(t17+t4*t10*t12*(1.0/2.0))*(1.0/2.0)-
+        Iwp3*t5*t6*t10*t11*(t15-t16)*(1.0/2.0)+Iwm3*t3*t6*t10*t11*(t15+t16)*(1.0/2.0)],
+        [t18-bwp*dth3-dth3*(dth2*t11*(-Iwp2*t4+Iwp1*t9*(1.0/2.0)-
+        Iwp3*t9*(1.0/2.0)+Iwp3*t4*t7+Iwp1*t4*t20)-dth1*(Iwp1-Iwp3)*(t4+t21-t4*t7*2.0))],
+        [t19-bwm*dth4+dth4*(dth1*(Iwm1-Iwm3)*(-t4+t21+t4*t7*2.0)-
+        dth2*t11*(-Iwm2*t4-Iwm1*t9*(1.0/2.0)+Iwm3*t9*(1.0/2.0)+Iwm3*t4*t7+Iwm1*t4*t20))]],dtype='float').reshape(4,1)
+    
     return Vv
 
 def model_dynamics(x,u,sys):
