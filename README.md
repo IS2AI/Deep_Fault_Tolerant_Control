@@ -2,7 +2,6 @@
 
 Implementation of a deep fault tolerant control for the inverted pendulum with dual-axis reaction wheels. 
 
-
 ## Requirements
 1. Python 3.8
 2. Pytorch 1.5
@@ -17,7 +16,6 @@ Implementation of a deep fault tolerant control for the inverted pendulum with d
 
 ## Model Training
 
-1. Open the the directory **src/**
-2. Set the model hyperparameters in **src/config.yml**
-3. Run the script for training:  ```python main.py 0```
-4. Run the script for testing: ```python  simulation.py```
+1. Set the model hyperparameters in ```src/config.yml```
+2. Run the script for training:  ```python main.py 0```
+3. Run the script for testing: ```python  simulation.py```
