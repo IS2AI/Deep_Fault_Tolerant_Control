@@ -10,18 +10,14 @@ Implementation of a deep fault tolerant control for the inverted pendulum with d
 
 ## Creation of conda environment and installation of packages
 
-1. conda create -n pytorch_env python=3.8
-2. conda install pytorch torchvision cudatoolkit=10.1 -c pytorch
-3. conda install -c anaconda pip
-4. conda install -c anaconda numpy
-5. conda install -c conda-forge matplotlib
-6. conda install -c anaconda scipy
-7. conda install -c anaconda scikit-learn
-8. conda install pyyaml
-
+1. Create conda environment: ```conda create -n pytorch_env python=3.8```
+2. Activate conda environment: ```conda activate pytorch_env```
+3. Install Pytorch: ```conda install pytorch torchvision cudatoolkit=10.1 -c pytorch```
+4. Install other packages: ```conda install numpy matplotlib scipy scikit-learn pyyaml pandas```
 
 ## Model Training
 
 1. Open the the directory **src/**
 2. Set the model hyperparameters in **src/config.yml**
-3. Run the script for training:  **python main.py 0**
+3. Run the script for training:  ```python main.py 0```
+4. Run the script for testing: ```python  simulation.py```

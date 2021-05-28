@@ -1,130 +1,124 @@
-import os
 import sys
-import io
-
 import time
-#import h5py
 import csv
 import copy
-import scipy
 import scipy.io as sio
-
-import math
-from math import cos, sin, sqrt
 import numpy as np
+import pandas as pd
 import matplotlib.pylab as plt
-from matplotlib import cm
-from matplotlib import image
-from matplotlib import pyplot
-
-import argparse
 import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
-from torch.nn import Linear, ReLU, CrossEntropyLoss, Sequential, Conv2d, MaxPool2d, Module, Softmax, BatchNorm2d, Dropout
-from torch.optim import Adam, SGD
-from torch.autograd import Variable
-import torch.utils.data as data_utils
-import torchvision
-
-import random
-from random import randint
-from random import randrange
-
+import yaml
 from utils import read_data
 from noise_generate import fail_traj_single
-import pandas as pd
-
-from models import RNN, FNN
-
+from math import cos, sin, sqrt
 plt.style.use('ggplot')
-import yaml
-
 
 class sys:
-  a=5
-  lc1 = [0,0,0.33]
-  m1 = 1.3
-  I1 =np.eye(3,3)
-  I1[0,0] = 0.18
-  I1[1,1] = 0.18
-  I1[2,2] = 0.01
-  Iwm = 1e-9*np.array([753238.87,394859.64,394859.64])
-  Iwp = 1e-9*np.array([753238.87,394859.64,394859.64])
-  K = 131e-3
-  k1 = 13.70937911565217391304347826087
-  k2 = 6.0195591156521739130434782608696
-  g = 9.81
-  b1 = 0.7e-1
-  b2 =2.5e-1
-  bwm =1.1087e-4
-  bwp=9.4514e-5
+    """System class"""
+    a=5
+    lc1 = [0,0,0.33]
+    m1 = 1.3
+    I1 =np.eye(3,3)
+    I1[0,0] = 0.18
+    I1[1,1] = 0.18
+    I1[2,2] = 0.01
+    Iwm = 1e-9*np.array([753238.87,394859.64,394859.64])
+    Iwp = 1e-9*np.array([753238.87,394859.64,394859.64])
+    K = 131e-3
+    k1 = 13.70937911565217391304347826087
+    k2 = 6.0195591156521739130434782608696
+    g = 9.81
+    b1 = 0.7e-1
+    b2 =2.5e-1
+    bwm =1.1087e-4
+    bwp=9.4514e-5
 
-def mass_matrix(I11_1,I11_2,I11_3,I12_1,I12_2,I12_3,I13_1,I13_2,I13_3,Iwm1,Iwm2,Iwm3,Iwp1,Iwp2,Iwp3,theta1,theta2):
-      t2 = cos(theta1);
-      t3 = sin(theta1);
-      t4 = I11_2*t2*(1.0/2.0);
-      t5 = I12_1*t2*(1.0/2.0);
-      t6 = t4+t5-I12_3*t3*(1.0/2.0)-I13_2*t3*(1.0/2.0);
-      t8 = sin(theta2);
-      t11 = t3*t8;
-      t7 = t2+t11;
-      t13 = t2*t8;
-      t9 = t3-t13;
-      t10 = cos(theta2);
-      t12 = t2-t11;
-      t14 = t3+t13;
-      t15 = t10**2;
-      M = np.array([I12_2,t6,0.0,0.0,t6,t2*(I11_1*t2-I13_1*t3)-t3*(I11_3*t2-I13_3*t3),0.0,0.0,0.0,0.0,Iwp2*t15*(1.0/2.0)+Iwp1*t7**2*(1.0/2.0)+Iwp3*t9**2*(1.0/2.0),0.0,0.0,0.0,0.0,Iwm2*t15*(1.0/2.0)+Iwm1*t12**2.*(1.0/2.0)+Iwm3*t14**2.*(1.0/2.0)],dtype='float').reshape(4,4)
-      return M
+def mass_matrix(I11_1,I11_2,I11_3,I12_1,I12_2,I12_3,I13_1,I13_2,I13_3,
+        Iwm1,Iwm2,Iwm3,Iwp1,Iwp2,Iwp3,theta1,theta2):
+    """Mass matrix from symbolic Matlab"""
+    t2 = cos(theta1)
+    t3 = sin(theta1)
+    t4 = I11_2*t2*(1.0/2.0)
+    t5 = I12_1*t2*(1.0/2.0)
+    t6 = t4+t5-I12_3*t3*(1.0/2.0)-I13_2*t3*(1.0/2.0)
+    t8 = sin(theta2)
+    t11 = t3*t8
+    t7 = t2+t11
+    t13 = t2*t8
+    t9 = t3-t13
+    t10 = cos(theta2)
+    t12 = t2-t11
+    t14 = t3+t13
+    t15 = t10**2
+    M = np.array([I12_2, t6, 0.0, 0.0, t6, t2*(I11_1*t2-I13_1*t3)-t3*(I11_3*t2-I13_3*t3),
+        0.0,0.0,0.0,0.0,Iwp2*t15*(1.0/2.0)+Iwp1*t7**2*(1.0/2.0)+Iwp3*t9**2*(1.0/2.0),0.0,
+        0.0,0.0,0.0,Iwm2*t15*(1.0/2.0)+Iwm1*t12**2.*(1.0/2.0)+Iwm3*t14**2.*(1.0/2.0)],
+        dtype='float').reshape(4,4)
+    return M
 
-def acting_forces(I11_1,I11_2,I11_3,I12_1,I12_3,I13_1,I13_2,I13_3,Iwm1,Iwm2,Iwm3,Iwp1,Iwp2,Iwp3,K,b1,b2,bwm,bwp,dth1,dth2,dth3,dth4,g,im,ip,k1,k2,lc11,lc12,lc13,m1,theta1,theta2):
-      t2 = dth2**2;
-      t3 = dth4**2;
-      t4 = sin(theta2);
-      t5 = dth3**2;
-      t6 = cos(theta1);
-      t7 = t6**2;
-      t8 = theta1*2.0;
-      t9 = sin(t8);
-      t10 = sqrt(2.0);
-      t11 = cos(theta2);
-      t12 = sin(theta1);
-      t13 = t11**2;
-      t14 = cos(t8);
-      t15 = t10*t12*(1.0/2.0);
-      t16 = t4*t6*t10*(1.0/2.0);
-      t17 = t6*t10*(1.0/2.0);
-      t18 = K*ip;
-      t19 = K*im;
-      t20 = t12**2;
-      t21 = t6*t12*t13;
-      Vv = np.array([[I11_3*t2*(1.0/2.0)+I13_1*t2*(1.0/2.0)-b1*dth1-k1*theta1-I11_1*t2*t9*(1.0/2.0)-I11_3*t2*t7-I13_1*t2*t7+I13_3*t2*t9*(1.0/2.0)+
-            Iwm1*t3*t4*(1.0/2.0)-Iwm3*t3*t4*(1.0/2.0)-Iwp1*t4*t5*(1.0/2.0)+Iwp3*t4*t5*(1.0/2.0)-Iwm1*t3*t4*t7+Iwm3*t3*t4*t7+Iwp1*t4*t5*t7-
-            Iwp3*t4*t5*t7-bwm*dth4*t10*t11*(1.0/2.0)+bwp*dth3*t10*t11*(1.0/2.0)-g*lc11*m1*t6+K*im*t10*t11*(1.0/2.0)-K*ip*t10*t11*(1.0/2.0)-
-            Iwm1*t3*t6*t12*t13*(1.0/2.0)+Iwm3*t3*t6*t12*t13*(1.0/2.0)-Iwp1*t5*t6*t12*t13*(1.0/2.0)+Iwp3*t5*t6*t12*t13*(1.0/2.0)-g*lc12*m1*t4*t12-
-
-            g*lc13*m1*t11*t12],
-            [-b2*dth2+dth1*(I11_1*dth2*t9*2.0+I11_2*dth1*t12+I11_3*dth2*t14*2.0+I12_3*dth1*t6+I12_1*dth1*t12+I13_2*dth1*t6-I13_3*dth2*t9*2.0+
-                                                   I13_1*dth2*t14*2.0)*(1.0/2.0)-k2*theta2-t10*(t19-bwm*dth4)*(1.0/2.0)-t10*(t18-bwp*dth3)*(1.0/2.0)-g*m1*(lc13*t4*t6-lc12*t6*t11)-
-            Iwm2*t3*t4*t11*(1.0/2.0)-Iwp2*t4*t5*t11*(1.0/2.0)-Iwm1*t3*t10*t11*t12*(t17-t4*t10*t12*(1.0/2.0))*(1.0/2.0)+Iwp1*t5*t10*t11*t12*(t17+t4*t10*t12*(1.0/2.0))*(1.0/2.0)-
-            Iwp3*t5*t6*t10*t11*(t15-t16)*(1.0/2.0)+Iwm3*t3*t6*t10*t11*(t15+t16)*(1.0/2.0)],[t18-bwp*dth3-dth3*(dth2*t11*(-Iwp2*t4+Iwp1*t9*(1.0/2.0)-Iwp3*t9*(1.0/2.0)+
-                                                                                                                                         Iwp3*t4*t7+Iwp1*t4*t20)-
-                                                                                                                             dth1*(Iwp1-Iwp3)*(t4+t21-t4*t7*2.0))],
-            [t19-bwm*dth4+dth4*(dth1*(Iwm1-Iwm3)*(-t4+t21+t4*t7*2.0)-dth2*t11*(-Iwm2*t4-Iwm1*t9*(1.0/2.0)+Iwm3*t9*(1.0/2.0)+Iwm3*t4*t7+Iwm1*t4*t20))]],dtype='float').reshape(4,1);
-      return Vv
+def acting_forces(I11_1,I11_2,I11_3,I12_1,I12_3,I13_1,I13_2,I13_3,
+        Iwm1,Iwm2,Iwm3,Iwp1,Iwp2,Iwp3,K,b1,b2,bwm,bwp,dth1,dth2,dth3,dth4,
+        g,im,ip,k1,k2,lc11,lc12,lc13,m1,theta1,theta2):
+    """Forces from symbolic Matlab"""
+    t2 = dth2**2
+    t3 = dth4**2
+    t4 = sin(theta2)
+    t5 = dth3**2
+    t6 = cos(theta1)
+    t7 = t6**2
+    t8 = theta1*2.0
+    t9 = sin(t8)
+    t10 = sqrt(2.0)
+    t11 = cos(theta2)
+    t12 = sin(theta1)
+    t13 = t11**2
+    t14 = cos(t8)
+    t15 = t10*t12*(1.0/2.0)
+    t16 = t4*t6*t10*(1.0/2.0)
+    t17 = t6*t10*(1.0/2.0)
+    t18 = K*ip
+    t19 = K*im
+    t20 = t12**2
+    t21 = t6*t12*t13
+    Vv = np.array([[I11_3*t2*(1.0/2.0)+I13_1*t2*(1.0/2.0)-b1*dth1-k1*theta1-
+        I11_1*t2*t9*(1.0/2.0)-I11_3*t2*t7-I13_1*t2*t7+
+        I13_3*t2*t9*(1.0/2.0)+Iwm1*t3*t4*(1.0/2.0)-Iwm3*t3*t4*(1.0/2.0)-
+        Iwp1*t4*t5*(1.0/2.0)+Iwp3*t4*t5*(1.0/2.0)-Iwm1*t3*t4*t7+Iwm3*t3*t4*t7+Iwp1*t4*t5*t7-
+        Iwp3*t4*t5*t7-bwm*dth4*t10*t11*(1.0/2.0)+bwp*dth3*t10*t11*(1.0/2.0)-
+        g*lc11*m1*t6+K*im*t10*t11*(1.0/2.0)-K*ip*t10*t11*(1.0/2.0)-
+        Iwm1*t3*t6*t12*t13*(1.0/2.0)+Iwm3*t3*t6*t12*t13*(1.0/2.0)-
+        Iwp1*t5*t6*t12*t13*(1.0/2.0)+Iwp3*t5*t6*t12*t13*(1.0/2.0)-g*lc12*m1*t4*t12-
+        g*lc13*m1*t11*t12],[-b2*dth2+dth1*(I11_1*dth2*t9*2.0+
+            I11_2*dth1*t12+I11_3*dth2*t14*2.0+I12_3*dth1*t6+I12_1*dth1*t12+
+            I13_2*dth1*t6-I13_3*dth2*t9*2.0+I13_1*dth2*t14*2.0)*(1.0/2.0)-k2*theta2-
+            t10*(t19-bwm*dth4)*(1.0/2.0)-t10*(t18-bwp*dth3)*(1.0/2.0)-g*m1*(lc13*t4*t6-lc12*t6*t11)-
+            Iwm2*t3*t4*t11*(1.0/2.0)-Iwp2*t4*t5*t11*(1.0/2.0)-
+            Iwm1*t3*t10*t11*t12*(t17-t4*t10*t12*(1.0/2.0))*(1.0/2.0)+
+            Iwp1*t5*t10*t11*t12*(t17+t4*t10*t12*(1.0/2.0))*(1.0/2.0)-
+            Iwp3*t5*t6*t10*t11*(t15-t16)*(1.0/2.0)+Iwm3*t3*t6*t10*t11*(t15+t16)*(1.0/2.0)],
+            [t18-bwp*dth3-dth3*(dth2*t11*(-Iwp2*t4+Iwp1*t9*(1.0/2.0)-
+                Iwp3*t9*(1.0/2.0)+Iwp3*t4*t7+Iwp1*t4*t20)-dth1*(Iwp1-Iwp3)*(t4+t21-t4*t7*2.0))],
+            [t19-bwm*dth4+dth4*(dth1*(Iwm1-Iwm3)*(-t4+t21+t4*t7*2.0)-
+                dth2*t11*(-Iwm2*t4-Iwm1*t9*(1.0/2.0)+Iwm3*t9*(1.0/2.0)+Iwm3*t4*t7+Iwm1*t4*t20))]],dtype='float').reshape(4,1)
+    return Vv
 
 def model_dynamics(x,u,sys):
-    M = mass_matrix(sys.I1[0,0],sys.I1[0,1],sys.I1[0,2],sys.I1[1,0],sys.I1[1,1],sys.I1[1,2] ,sys.I1[2,0],sys.I1[2,1],sys.I1[2,2],sys.Iwm[0],sys.Iwm[1],sys.Iwm[2],sys.Iwp[0],sys.Iwp[1],sys.Iwp[2],x[0,0],x[1,0])
-    V=acting_forces(sys.I1[0,0],sys.I1[0,1],sys.I1[0,2],sys.I1[1,0], sys.I1[1,2],sys.I1[2,0],sys.I1[2,1],sys.I1[2,2],sys.Iwm[0],sys.Iwm[1],sys.Iwm[2],sys.Iwp[0],sys.Iwp[1],sys.Iwp[2],sys.K,sys.b1,sys.b2,sys.bwm,sys.bwp,x[2,0],
-                    x[3,0],x[4,0],x[5,0], sys.g,u[0],u[1],sys.k1,sys.k2,sys.lc1[0],sys.lc1[1],sys.lc1[2],sys.m1,x[0,0],x[1,0]);
+    """Dynamics equation from Matlab symbolic"""
+
+    u = u.detach().numpy()
+    M = mass_matrix(sys.I1[0,0],sys.I1[0,1],sys.I1[0,2],sys.I1[1,0],sys.I1[1,1],sys.I1[1,2] ,sys.I1[2,0],
+            sys.I1[2,1],sys.I1[2,2],sys.Iwm[0],sys.Iwm[1],sys.Iwm[2],sys.Iwp[0],sys.Iwp[1],sys.Iwp[2],x[0,0],x[1,0])
+    V=acting_forces(sys.I1[0,0],sys.I1[0,1],sys.I1[0,2],sys.I1[1,0], sys.I1[1,2],sys.I1[2,0],sys.I1[2,1],
+            sys.I1[2,2],sys.Iwm[0],sys.Iwm[1],sys.Iwm[2],sys.Iwp[0],sys.Iwp[1],sys.Iwp[2],sys.K,sys.b1,sys.b2,sys.bwm,sys.bwp,x[2,0],
+            x[3,0],x[4,0],x[5,0], sys.g,u[0],u[1],sys.k1,sys.k2,sys.lc1[0],sys.lc1[1],sys.lc1[2],sys.m1,x[0,0],x[1,0])
     dq = np.linalg.solve(M,V)
-    dx = np.concatenate((x[2,0].reshape(1,1),x[3,0].reshape(1,1),dq),axis=0);
+    dx = np.concatenate((x[2,0].reshape(1,1),x[3,0].reshape(1,1),dq),axis=0)
+    
     return dx
 
 
 def normalized_cost_sample(states_true, inputs_nn, states_ocp, control_ocp):
+    """Cost calculation"""
     Q=np.eye(6)
     R=np.eye(2)
 
@@ -141,14 +135,13 @@ def normalized_cost_sample(states_true, inputs_nn, states_ocp, control_ocp):
     for i in range(sim_len):
         one=abs(states_ocp[i,:].reshape(1,6))
         two=abs(control_ocp[i,:].reshape(1,2))
-
         cost_ocp=cost_ocp+np.matmul(one,np.matmul(Q,np.transpose(one)))+np.matmul(two,np.matmul(R,np.transpose(two)))
 
     cost_nn=0
     for i in range(sim_len):
         one1=states_true[i,:].reshape(1,6)
         two1=inputs_nn[i,:].reshape(1,2)
-
+        
         cost_nn=cost_nn+np.matmul(one1,np.matmul(Q,np.transpose(one1)))+np.matmul(two1,np.matmul(R,np.transpose(two1)))
 
     return cost_ocp, cost_nn
@@ -209,15 +202,15 @@ def simulate(xs0, sys, model, win_len, f1, f2, f3, index, sim_normalize, sim_fau
         x_true_curr = x_true_curr.reshape(6,1)
 
         x_faulty_seq = faulty_state_to_nn_array[-win_len:, :]
-        x_faulty_seq = np.expand_dims(x_faulty_seq, axis=0)  # comment for old FNN -  my_model2.pt
+        x_faulty_seq = np.expand_dims(x_faulty_seq, axis=0)  
+        # comment for old FNN -  my_model2.pt
 
         x_faulty_seq = torch.from_numpy(x_faulty_seq)
         x_faulty_seq = x_faulty_seq.float().to(device)
 
         y = model(x_faulty_seq)
 
-
-        u=y.reshape(2,1).cpu()
+        u = y.reshape(2,1).cpu()
         u = torch.clamp(u, -3, 3)
 
         k1 = model_dynamics(x_true_curr,u,sys)
@@ -238,8 +231,6 @@ def simulate(xs0, sys, model, win_len, f1, f2, f3, index, sim_normalize, sim_fau
         if sim_normalize == True:
             #normalize: option 3 - Z Score
             for ind_state in range(6):
-                #std_temp = [0.08, 0.11, 0.94, 0.84, 71.0, 71.0]
-                #std_temp = [0.63, 0.63, 0.94, 0.84, 71.0, 71.0]
                 std_temp = [0.103, 0.145, 1.2, 1.073, 90.71, 89.97]
                 x_faulty_next[:,ind_state] = x_faulty_next[:, ind_state]/std_temp[ind_state] # mean is zero
                 pass
@@ -260,7 +251,6 @@ def plot_states(states_true, state_to_nn, states_ocp, inputs_nn, control_ocp, wi
 
     file_st = '../checkpoints/' + '_rnn_states_fault_pos1x' +'.txt'
 
-
     states_true_plot = np.concatenate((x0, states_true), axis= 0)
     state_to_nn_plot = np.concatenate((x0, state_to_nn), axis= 0)
     states_ocp_plot = np.concatenate((x0, states_ocp), axis= 0)
@@ -269,7 +259,8 @@ def plot_states(states_true, state_to_nn, states_ocp, inputs_nn, control_ocp, wi
 
     with open(file_st, "w") as myCsv:
          csvWriter = csv.writer(myCsv, delimiter=' ')
-         all_data = np.concatenate((states_true_plot, state_to_nn_plot, states_ocp_plot[0:400,:], inputs_nn_plot, control_ocp_plot[0:400,:]), axis = 1)
+         all_data = np.concatenate((states_true_plot, state_to_nn_plot, states_ocp_plot[0:400,:], 
+             inputs_nn_plot, control_ocp_plot[0:400,:]), axis = 1)
          csvWriter.writerows(all_data)
 
     if is_plot == True:
@@ -336,19 +327,14 @@ def plot_states(states_true, state_to_nn, states_ocp, inputs_nn, control_ocp, wi
 
 
 
-#######
-
-
 if __name__ == '__main__':
 
-
     start = time.time()
-
     config = yaml.safe_load(open("config.yml"))
 
     ############################
     # Model
-    ### ########################
+    ###########################
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     sim_model_name = config['sim_model_name']
@@ -404,21 +390,21 @@ if __name__ == '__main__':
     #print(model)
 
     if sim_fault == False:
-        version = 'n'
+        fault_version = 'n'
     else:
         if sim_manual_fault_type == 0:
-            version = 'a'
+            fault_version = 'a'
         elif sim_manual_fault_type == 2:
-            version = 'b'
+            fault_version = 'b'
         elif sim_manual_fault_type == 4:
-            version = 'c'
+            fault_version = 'c'
         elif sim_manual_fault_type == 8:
-            version = 'x'
+            fault_version = 'x'
         else:
             raise ValueError('Not valid sim_manual_fault_type')
 
 
-    file_cost = '../checkpoints/' + sim_model_name + '_del2_cost_' + str(version) +'.txt'
+    file_cost = '../checkpoints/' + sim_model_name + '_del2_cost_' + str(fault_version) +'.txt'
     print('File : ', file_cost)
 
     for index in range(sim_num):
@@ -434,7 +420,6 @@ if __name__ == '__main__':
         # fault_states = 2
         # fault_val = 3
 
-
         # Read OCP solution
         states_ocp=state_orig[num,:,:]
         control_ocp=control_orig[num,:,:]
@@ -446,7 +431,8 @@ if __name__ == '__main__':
         control_ocp = control_ocp[win_len:,:]
 
         # Simulate NN solution
-        state_to_nn_list,inputs_nn_list,states_true_list = simulate(xs, sys, model, win_len, fault_time, fault_states, fault_val, index, sim_normalize, sim_fault)
+        state_to_nn_list,inputs_nn_list,states_true_list = simulate(xs, sys, model, win_len, 
+                fault_time, fault_states, fault_val, index, sim_normalize, sim_fault)
 
         # predicted
         #state_to_nn=[t.numpy() for t in state_to_nn_list]
@@ -470,8 +456,10 @@ if __name__ == '__main__':
                 print('huge --', index, norm_ratio)
 
             if is_plot == True:
-                print('index - {}, fault type - {}, fault value - {}, cost_norm - {}'.format(index, fault_states, fault_val, cost_nn/cost_ocp))
-                plot_states(states_true, state_to_nn, states_ocp, inputs_nn, control_ocp, win_len, is_plot, xs, ys)
+                print('index - {}, fault type - {}, fault value - {}, cost_norm - {}'.format(
+                    index, fault_states, fault_val, cost_nn/cost_ocp))
+                plot_states(states_true, state_to_nn, states_ocp, inputs_nn, 
+                        control_ocp, win_len, is_plot, xs, ys)
 
     # Calculate norm cost
     cost_array = np.array(cost_list)

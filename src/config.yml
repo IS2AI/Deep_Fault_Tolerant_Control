@@ -17,7 +17,7 @@ test_set_ratio : 0.05
 
 # Training
 num_epochs : 300        # number of epochs
-batchSize : 1024        # batch size
+batch_size : 1024        # batch size
 learning_rate : 0.001   # optimizer learning_rate
 
 valid_period : 100   # validation period
@@ -25,7 +25,6 @@ valid_size: 100
 
 # SAVE TRAINED MODEL
 model_name : 'Model_1'
-
 
 #############s######
 # MODEL SIMULATION

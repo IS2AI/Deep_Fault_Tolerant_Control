@@ -1,10 +1,9 @@
-# author: Daulet Baimukashev
-# Created on: 6.05.20
-
+"""
+This module contains the Dataset class.
+"""
 import numpy as np
 import torch
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, utils
+from torch.utils.data import Dataset
 
 class ControlDataset(Dataset):
     """Control dataset """
@@ -37,7 +36,7 @@ class ControlDataset(Dataset):
 
         return sample
 
-class ToTensor(object):
+class ToTensor():
     """Convert ndarrays in sample to Tensors."""
 
     def __call__(self, sample):

@@ -1,26 +1,19 @@
-# author: Daulet Baimukashev
-# Created on: 6.05.20
-
+"""
+The module for reading data and training.
+"""
 import scipy.io as sio
 import numpy as np
-
-import sys
-import numpy as np
+import yaml
 import matplotlib.pyplot as plt
 import time
-
 import torch
-import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, utils
 from sklearn.model_selection import train_test_split
-
 from noise_generate import add_noise
-import yaml
-import copy
 
-def train_model(model, device, data_train, x_dev, y_dev, optimizer, criterion, num_epochs, model_save_path,  window_len, stride_len, valid_period):
+def train_model(model, device, data_train, x_dev, y_dev, optimizer, criterion,
+        num_epochs, model_save_path,  window_len, stride_len, valid_period):
+    """Training function"""
     print('Start training the model')
 
     # weight decay
@@ -36,7 +29,6 @@ def train_model(model, device, data_train, x_dev, y_dev, optimizer, criterion, n
             inputs = data['features']
             inputs = inputs.float()
             inputs = inputs.to(device)
-            #inputs = inputs.requires_grad_().to(device)
 
             labels = data['labels']
             labels = labels.type(torch.cuda.FloatTensor)
@@ -44,20 +36,16 @@ def train_model(model, device, data_train, x_dev, y_dev, optimizer, criterion, n
 
             #zero the parameter gradients
             optimizer.zero_grad()
-
             # forward propagation
             output = model(inputs)
 
             loss = criterion(output, labels)
+            add_L2 = True
 
-            add_L2 = False
-
-            if add_L2 == True:
-                #print('L2 added')
+            if add_L2:
                 l2_reg = 0.0
                 for W in model.parameters():
-                   l2_reg = l2_reg + W.norm(2) #torch.sum(torch.abs(W))
-
+                    l2_reg = l2_reg + W.norm(2) #torch.sum(torch.abs(W))
                 loss = loss + 1.0/(2*output.size(0))*l2_reg * 0.001
 
             loss.backward()
@@ -72,11 +60,12 @@ def train_model(model, device, data_train, x_dev, y_dev, optimizer, criterion, n
 
             if (i+1) % 500 == 0:    # print every 100 mini-batches
                 end = time.time()
-                print('Epoch: {}, Iter: {}, Loss: {}, Elapsed: {}'.format(epoch + 1, i + 1, running_loss / 500, end-start))
+                print('Epoch: {}, Iter: {}, Loss: {}, Elapsed: {}'.format(
+                    epoch + 1, i + 1, running_loss / 500, end-start))
 
-                with open(model_save_path + '_loss.txt', "a") as myfile:
-                        myfile.write(str(running_loss / 500))
-                        myfile.write("\n")
+                #with open(model_save_path + '_loss.txt', "a") as myfile:
+                #    myfile.write(str(running_loss / 500))
+                #    myfile.write("\n")
                 running_loss = 0.0
 
         scheduler.step()
@@ -97,7 +86,7 @@ def train_model(model, device, data_train, x_dev, y_dev, optimizer, criterion, n
 
 
 def test_model(model, device, x_data, y_data, plot_enable, window_len, stride_len):
-
+    """Test the model."""
     config = yaml.safe_load(open("config.yml"))
     valid_size = config['valid_size']
 
@@ -179,7 +168,8 @@ def test_model(model, device, x_data, y_data, plot_enable, window_len, stride_le
 
     mean_rmse = sum_rmse/count_rmse
 
-    print('Number of samples tested: ', count_rmse, 'Number of inputs sequences: ', count, 'mean_rmse: ', mean_rmse)
+    print('Number of samples tested: ', count_rmse, 'Number of inputs sequences: ', 
+            count, 'mean_rmse: ', mean_rmse)
     # mean and std dev
     end = time.time()
     print('Elapsed time for evaluation', end-start)
@@ -192,77 +182,22 @@ def read_data(window_len, stride_len, n_times):
     state_len = config['state_len']
     n_times_orig = config['n_times_orig']
 
-
     path = '../data/'
-    file = "outputset1.mat"
-    a = sio.loadmat(path + file)
-    file = "outputset2.mat"
-    b = sio.loadmat(path + file)
-    file = "outputset3.mat"
-    c = sio.loadmat(path + file)
-    file = "outputset4.mat"
-    d = sio.loadmat(path + file)
-    file = "outputset6.mat"
-    e = sio.loadmat(path + file)
-    file = "outputset7.mat"
-    f = sio.loadmat(path + file)
-    file = "outputset8.mat"
-    g = sio.loadmat(path + file)
-    file = "outputset9.mat"
-    h = sio.loadmat(path + file)
-    file = "outputset10.mat"
-    j = sio.loadmat(path + file)
+    state = np.empty([500,401,6])
+    control = np.empty([500,401,2])
 
-    control=np.concatenate((a['controls'],b['controls'],c['controls'],d['controls'], e['controls'],f['controls'],g['controls'],h['controls']))
-    state=np.concatenate((a['states'],b['states'],c['states'],d['states'],e['states'], f['states'],g['states'],h['states']))
-
+    for i in range(1,8):
+        fname = 'outputset' + str(i) + '.mat'
+        temp_data = sio.loadmat(path + fname)
+        
+        control = np.concatenate((control,  temp_data['controls']))
+        state = np.concatenate((state,  temp_data['states']))
 
     state = state[:,0:state_len,:]
     control = control[:,0:state_len,:]
-
-    print('>> Before fault:', state.shape  )
-
-
+    
     # ADD FAULT
     state, control = add_noise(state,control, n_times, n_times_orig)
-
-    # normalize inputs
-    #max_state_values = [3.14, 3.14, 10, 10, 350, 350,5,5]
-    #for ind in range(6):
-        # option 1
-        # normalize by the POSSIBLE min and max values
-
-        #state[:, :, ind] = np.clip(state[:, :, ind], -max_state_values[ind], max_state_values[ind])/max_state_values[ind]
-
-        #pass
-        #option 2
-        # normalize by the min and max values of the given dataset
-        #state[:, :, ind] = (state[:, :, ind] - np.amin(state[:, :, ind])) /(-np.amin(state[:, :, ind]) + np.amax(state[:, :, ind]))
-        # print(np.amin(state[:, :, ind]))
-        # print(np.amax(state[:, :, ind]))
-
-        #option 3 - Z Scorie
-        # normalize
-
-        # print(np.std(state[:, :, ind]))
-        #std_temp = np.std(state[:, :, ind])
-        #state[:, :, ind] = state[:, :, ind]/std_temp # mean is zero
-
-        #state[:, :, ind] = (state[:, :, ind] - np.amin(state[:, :, ind])) /(-np.amin(state[:, :, ind]) + np.amax(state[:, :, ind]))
-        # print(np.amin(state[:, :, ind]))
-        # print(np.amax(state[:, :, ind]))
-
-
-
-    # add gaussian noise
-    #for ind in range(6):
-        #a1, b1, c1 = state.shape
-        #print(a1)
-        #noise_random = np.random.normal(0,0.01,(4000,b1))
-        #print(state[:, :, ind].shape, noise_random.shape)
-        #state[2000:6000, :, ind] = state[2000:6000, :, ind] + noise_random
-
-
     print('>> After fault:', state.shape  )
 
     train_ratio = config['train_set_ratio']
@@ -271,9 +206,10 @@ def read_data(window_len, stride_len, n_times):
 
     # shuffle
     # divide into train/dev/test set
-    x_train, x_test, y_train, y_test = train_test_split(state, control, test_size= 1 - train_ratio, shuffle = True, random_state = 1)
-    x_dev, x_test, y_dev, y_test = train_test_split(x_test, y_test, test_size=test_ratio/(test_ratio + dev_ratio), shuffle = False)
-
+    x_train, x_test, y_train, y_test = train_test_split(state, control, 
+            test_size=1-train_ratio, shuffle=True, random_state=1)
+    x_dev, x_test, y_dev, y_test = train_test_split(x_test, y_test, 
+            test_size=test_ratio/(test_ratio + dev_ratio), shuffle=False)
 
     # divide test into windows
     # x_train_sliced -> input sequence
@@ -287,7 +223,8 @@ def read_data(window_len, stride_len, n_times):
 
 def extract_slices(x, window_len, stride_len):
     """
-    Divide train data to small samples of input sequences with provided window and step length
+    Divide train data to small samples of input sequences with 
+    provided window and step length
     """
 
     width = x.shape[1]
@@ -300,11 +237,8 @@ def extract_slices(x, window_len, stride_len):
         # extract input sequences
         index_start = count*stride_len
         index_end = count*stride_len + window_len
-
         x_temp = x[:, index_start:index_end, :]
-
         x_sliced = np.vstack((x_sliced, x_temp))
-
         count += 1
 
     print('>> stride count: ', count)
