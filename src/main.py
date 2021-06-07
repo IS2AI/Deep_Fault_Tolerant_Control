@@ -36,15 +36,15 @@ def main():
     #create dataset
     transformed_control_dataset_train = ControlDataset(x_train, y_train,
         transform=transforms.Compose([ToTensor()]))
-    #transformed_control_dataset_dev = ControlDataset(x_dev, y_dev,
-        #transform=transforms.Compose([ToTensor()]))
+    transformed_control_dataset_dev = ControlDataset(x_dev, y_dev,
+        transform=transforms.Compose([ToTensor()]))
     #transformed_control_dataset_test = ControlDataset(x_test, y_test,
         #transform=transforms.Compose([ToTensor()]))
     # create batch
     data_train = DataLoader(transformed_control_dataset_train,
         batch_size=batch_size, shuffle=True, num_workers=1, drop_last=True)
-    #data_dev = DataLoader(transformed_control_dataset_dev, batch_size=1,
-        #shuffle=False, num_workers=1, drop_last=True)
+    data_dev = DataLoader(transformed_control_dataset_dev, batch_size=batch_size,
+        shuffle=False, num_workers=1, drop_last=True)
     #data_test = DataLoader(transformed_control_dataset_test, batch_size=1,
         #shuffle=False, num_workers=1, drop_last=True)
 
@@ -78,7 +78,7 @@ def main():
         #set the training loss and optimizer
         criterion = nn.MSELoss()
         optimizer = optim.RMSprop(model.parameters(), lr=learning_rate)
-        train_model(model, device, data_train, x_dev, y_dev, optimizer, criterion,
+        train_model(model, device, data_train, data_dev, x_dev, y_dev, optimizer, criterion,
             num_epochs, model_save_path, window_len, stride_len, valid_period)
     else:
         # test mode
